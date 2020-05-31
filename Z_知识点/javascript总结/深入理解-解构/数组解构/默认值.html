@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <!--
+       默认值：
+    -->
+    <script type = 'text/javascript'>
+        var [a=3, b=5] = [undefined, 4];
+        console.log(a);  //3   undefined 时,用默认值
+        console.log(b);  //4   !undefined 时,不用默认值
+    </script>
+</body>
+</html>
