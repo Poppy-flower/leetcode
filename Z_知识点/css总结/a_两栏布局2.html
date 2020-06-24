@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    *{
+      margin: 0;
+      padding: 0;
+    }
+    .father{
+      height: 400px;
+    }
+    .left{
+      width: 200px;
+      height: 40px;  /*左右不等高，左比右短，正常会环绕，解决环绕*/
+      background-color: yellow;
+      float: left;  /*left 左浮*/
+    }
+    .right{
+      height: 90px;
+      background-color: green;
+      overflow: hidden;  /*右侧触发BFC*/
+    }
+  </style>
+</head>
+<body>
+<div class="father">
+  <div class="left">left</div>
+  <div class="right">right</div>
+</div>
+</body>
+</html>

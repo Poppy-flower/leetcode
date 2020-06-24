@@ -233,8 +233,10 @@ function convert(list){
     });
     return res;
 }
-//转化成树形数组  [{parentId: xxx, id: xxx}, ...]=>[{}]
+
 /**
+ * @思必达
+ * 转化成树形数组  [{pid: xxx, id: xxx}, ...]=>[{}]
  * 1. 创建result
  * 2. data 不是数组 ，返回[]
  * 3. data 是数组
@@ -242,33 +244,54 @@ function convert(list){
  *      3.2 初始化map
  *      3.3 map[每个id] = 每个item；
  *      3.4 处理data
- *           帮data找parent
+ *           帮data找parent(利用了引用类型)
  *                 有parent，往里面加children，分两种，有children属性，没children属性
  *                 没有parent，直接push进res数组
  */
-function toTree(data){
-    let res = [];
-    if(!Array.isArray(data)){
-        return res;
-    }
-    data.forEach(item=>{
-        delete item.children;
-    });
-    let map = {};
-    data.map(item=>{
-        map[item.id] = item;
-    });
-
-    data.forEach(item=>{
-        let parent = map[item.parentId];
-        if(parent){
-            (parent.children || parent.children=[]).push(item);
-        }else{
-            res.push(item);
+function toTreeFn(){
+    //通用，不考虑特殊情况
+    function toTree(arr) {
+        let result = [];
+        let map = {};
+        for(let item of arr){
+            map[item.id] = item;
         }
-    });
+        for(let item of arr){
+            let parent = map[item.pid];
+            if(parent){
+                (parent.children || (parent.children = [])).push(item);
+            }else{
+                result.push(item);
+            }
+        }
+        return result;
+    }
 
-    return res;
+    function toTree2(arr) {
+        let result = [];
+        //不是数组，返回[]
+        if(!Array.isArray(arr)){
+            return result;
+        }
+
+        let map = {};
+        //首先清洗数据，清除children属性，防止影响
+        for(let item of arr){
+            delete item.children;
+        }
+        for(let item of arr){
+            map[item.id] = item;
+        }
+        for(let item of arr){
+            let parent = map[item.pid];
+            if(parent){
+                (parent.children || (parent.children = [])).push(item);
+            }else{
+                result.push(item);
+            }
+        }
+        return result;
+    }
 }
 
 //LeetCode 合并两个有序数组
@@ -494,8 +517,7 @@ function BinarySearchTree(){
 
     //@todo 二叉树-广度优先遍历 二维数组 一维数组
 
-    //@todo 二叉树-深度优先遍历
-
+    //二叉树-深度优先遍历 === 先序遍历
     //二叉树的 先序遍历 存到结果数组
     var preorderTraversal = function(root) {
         var res = [];
@@ -535,7 +557,63 @@ function BinarySearchTree(){
         return res;
     };
 
-    //@todo 根据二叉树的先序和中序遍历结果，重建出该二叉树
+    /**
+     * 重建二叉树
+     * 1. LeetCode105 从前序和中序遍历序列构造二叉树
+     * 2. LeetCode106 从中序和后序遍历序列构造二叉树
+     */
+    function buildTree(){
+        //LeetCode105 从前序和中序遍历序列构造二叉树
+        /**
+         * Definition for a binary tree node.
+         * function TreeNode(val) {
+         *     this.val = val;
+         *     this.left = this.right = null;
+         * }
+         */
+        /**
+         * @param {number[]} preorder
+         * @param {number[]} inorder
+         * @return {TreeNode}
+         */
+        var buildTree = function(preorder, inorder) {
+            var n = preorder.length;
+            var indexMap = {};
+            inorder.map((item, index)=>{
+                indexMap[item] = index;
+            });
+            function myBuildTree(preorder, inorder, preorder_left, preorder_right, inorder_left, inorder_right){
+                if(preorder_left > preorder_right){
+                    return null;
+                }
+
+                //前序遍历中的第一个节点就是根节点
+                var preorder_root = preorder_left;
+
+                //在中序遍历中定位根节点
+                var inorder_root = indexMap[preorder[preorder_root]];
+
+                //先把根节点建立出来
+                var root = new TreeNode(preorder[preorder_root]);
+
+                //得到左子树中的节点数目
+                var size_left_subtree = inorder_root - inorder_left;
+
+                //递归的构造左子树，并连接到根节点
+                //中序遍历 根左边的就是左子树 ==== 先序遍历 根下一个开始左子树
+                root.left = myBuildTree(preorder, inorder, preorder_left+1, preorder_left+inorder_root-inorder_left, inorder_left, inorder_root-1);
+
+                // 递归地构造右子树，并连接到根节点
+                //中序遍历 根右边的就是右子树 === 先序遍历 左子树后面剩余的右子树
+                root.right = myBuildTree(preorder, inorder, preorder_left+inorder_root-inorder_left+1, preorder_right, inorder_root+1, inorder_right);
+
+                return root;
+            }
+            return myBuildTree(preorder, inorder, 0, n-1, 0, n-1);
+        };
+
+        //@todo LeetCode106 从中序和后序遍历序列构造二叉树
+    }
 
 
     //二叉树 最大深度
@@ -660,13 +738,63 @@ function NTree(){
     };
 
     //@猿辅导
-    //@todo N叉树 求depth层有多少个节点 root的层级为1
-
+    //N叉树 求depth层有多少个节点 根的层级为1
+    var getNodeCount = function(root, depth){
+        let res = [];
+        function helper(node, level){
+            if(node === null) return;
+            (res[level] || (res[level]=[])).push(node.val);
+            let children = node.children;
+            !!children && (children.length>0) && children.map((childNode)=>{
+                helper(childNode, level+1);
+            })
+        }
+        helper(root, 1);
+        if(root === null) return 0;
+        return res[depth]? res[depth].length: 0;
+    }
 }
 
 //@todo 判断另一颗树的子结构
 
-//@todo 给定一个非空数组，返回此数组中第三大的数。
+//给定一个非空数组，返回此数组中第三大的数 有就返回 没有就返回最大的
+function fn(){
+    /**
+     * 方法一：set
+     * 方法二：
+     *     1. 三个变量存第一大 第二大 第三大， one two three
+     *     2. 遍历数组，每次比较，比第一个大，往后顺移；
+     *                      比第二个大，第二个往后顺移；
+     *                      比第三个大，替换第三大的数；
+     *     3. 最后得到第三大的数，没有就返回最大的
+     */
+    var thirdMax = function(nums) {
+        var set = new Set(nums)
+        var arr = [...set];
+        arr.sort((a,b)=>b-a);
+        return (arr.length<3)? arr[0]: arr[2];
+    };
+
+    var thirdMax = function(nums) {
+        var one = nums[0];
+        var two = -Infinity;
+        var three = -Infinity;
+        for(var i=0;i<nums.length;i++){
+            if(nums[i]==one || nums[i]==two || nums[i]==three) continue;
+            if(nums[i]>one){
+                three=two;
+                two=one;
+                one=nums[i];
+            }else if(nums[i]>two){
+                three=two;
+                two=nums[i];
+            }else if(nums[i]>three){
+                three=nums[i];
+            }
+        }
+        return ((nums.length >= 3) && (three != -Infinity)) ? three : one;
+    };
+}
 
 //零钱兑换
 var coinChange = function(coins, amount) {
@@ -682,29 +810,51 @@ var coinChange = function(coins, amount) {
     return (dp[amount]>amount)? -1: dp[amount];
 };
 
-//@todo //反转数组|字符串
+//字符串相关
+function StringFn(){
+    //判断是否是回文字符串，忽略大小写
+    var isPalindrome = function(s) {
+        s = s.replace(/\W/g, '').toLowerCase();
+        return (s === s.split('').reverse().join(''));
+    };
 
-
-//判断是否是回文字符串，忽略大小写
-var isPalindrome = function(s) {
-    s = s.replace(/\W/g, '').toLowerCase();
-    return (s === s.split('').reverse().join(''));
-};
-
-//用自己的方法，判断是否是回文字符串
-var isPalindrome = function(s){
-    var i = 0,  //创建左指针
-        j = s.length-1;  //创建右指针
-    var flag = true;
-    while(i<=j){
-        if(s[i] !== s[j]){
-            return flag = false;
+    //用自己的方法，判断是否是回文字符串
+    var isPalindrome = function(s){
+        var i = 0,  //创建左指针
+            j = s.length-1;  //创建右指针
+        var flag = true;
+        while(i<=j){
+            if(s[i] !== s[j]){
+                return flag = false;
+            }
+            i++;
+            j--;
         }
-        i++;
-        j--;
-    }
-    return flag;
-};
+        return flag;
+    };
+
+    //@todo //反转数组|字符串
+
+    //LeetCode面试题48 最长不含重复字符的子字符串
+    var lengthOfLongestSubstring = function(s) {
+        let head = 0;
+        let tail = 0;
+        if(s.length<2) return s.length;
+
+        let res = 1;
+        while(tail<(s.length-1)){
+            tail++;
+            if(!s.slice(head, tail).includes(s[tail])){
+                res = Math.max(tail-head+1, res);
+            }else{
+                while(s.slice(head, tail).includes(s[tail])){
+                    head++;
+                }
+            }
+        }
+        return res;
+    };
+}
 
 //计数质数 统计所有小于非负整数 n 的质数的数量
 var countPrimes = function(n) {
@@ -726,8 +876,6 @@ var countPrimes = function(n) {
     }
     return count;
 };
-
-//@todo 最长不含重复字符的子字符串
 
 //@todo 栈排序
 

@@ -9,26 +9,20 @@
     函数防抖：是函数在特定的时间内不被再调用后执行。
  */
 //防抖
-function debounce(fn, wait){
-    /**
-     * 1. 触发事件，n秒后才执行
-     * 2. 如果你在一个时间触发的n秒内又触发了这个事件，那就以新的时间为准，n秒后才执行
-     * 3. 总之，就是要等你触发完事件 n秒内不再触发事件，我才执行
-     */
-    var timer = null;
-    return function(){
-        if(timer){
-            clearTimeout(timer);
-        }else{
-            timer = setTimeout(()=>{
-                fn.apply(this, arguments);
-            }, wait)
+function debance(fn, wait){
+    let timeout;
+    return ()=>{
+        if(timeout){
+            clearTimeout(timeout);
         }
+        timeout = setTimeout(()=>{
+            fn.apply(this, arguments);
+        }, wait);
     }
 }
 //节流
 function throttle(){
-    function throttle1(fn, wait){
+    function throttle1(fn, delay){
         /**
          * 设置一个定时器，触发事件的时候
          *    如果定时器存在，就不执行；
@@ -40,24 +34,24 @@ function throttle(){
                 timer = setTimeout(()=>{
                     timer = null;
                     fn.apply(this, arguments);
-                }, wait);
+                }, delay);
             }
         }
     }
 
-    function throttle2(fn, wait){
-        var flag = true;
+    function throttle2(fn, delay){
+        var valid = true;
         return function(){
-            if(!flag) return;  //工作时间，不执行，直接return
-            flag = false;  //把标志位设置为工作时间
+            if(!valid) return;  //工作时间，不执行，直接return
+            valid = false;  //把标志位设置为工作时间
             setTimeout(()=>{
                 fn.apply(this, arguments);
-                flag = true;
-            }, wait);
+                valid = true;
+            }, delay);
         }
     }
 
-    function throttle3(fn, wait){
+    function throttle3(fn, delay){
         /**
          * 去除当前的时间戳，减去之前的时间戳（最初设置为0）
          *  如果大于设置的时间周期，就执行函数，然后更新时间戳为当前的时间戳
@@ -66,7 +60,7 @@ function throttle(){
         let startTime = 0;
         return function(){
             var now = +(new Date());
-            if(now - startTime > wait){
+            if((now - startTime) > delay){
                 fn.apply(this, arguments);
                 startTime = now;
             }
@@ -318,99 +312,152 @@ function flatten(){
 }
 
 //手写promise
-class Promise{
-    constructor(executor){
-        this.state = 'pending';
-        this.value = undefined;
-        this.reason = undefined;
-        //成功存放的数组
-        this.onResolvedCallbacks = [];
-        //失败存放的数组
-        this.onRejectedCallbacks = [];
+function fn(){
+    //my
+    function _Promise(resolver){
+        this._status = 'pending';
+        this._result = '';
+        resolver(this.resolve.bind(this), this.reject.bind(this));
+    }
 
-        let resolve = value =>{
-            if(this.state === 'pending'){
-                this.state = 'fulfilled';
-                this.value = value;
-                //一旦resolve执行，调用成功数组的函数
-                this.onResolvedCallbacks.forEach(fn=>fn());
+    _Promise.prototype.resolve = function(result){
+        if(this._status === 'pending'){
+            this._status = 'filfilled';
+            this._result = result;
+        }
+    };
+
+    _Promise.prototype.reject = function(result){
+        if(this._status === 'fulfilled'){
+            this._status = 'rejected';
+            this._result = result;
+        }
+    };
+
+    _Promise.prototype.then = function(isResolve, isReject){
+        if(this._status = 'fulfilled'){
+            var isPromise = isResolve(this._result);
+            if(isPromise instanceof _Promise){
+                return isPromise;
             }
-        };
-
-        let reject = value =>{
-            if(this.state === 'pending'){
-                this.state = 'rejected';
-                this.value = value;
-                //一旦resolve执行，调用成功数组的函数
-                this.onRejectedCallbacks.forEach(fn=>fn());
+            return this;
+        }else if(this._status = 'rejected' && arguments[1]){
+            var err = new TypeError(this._result);
+            var isPromise = isReject(err);
+            if(isPromise instanceof _Promise){
+                return isPromise;
             }
-        };
+            return this;
+        }
+    };
 
-        try{
-            executor(resolve, reject);
-        }catch(err){
-            reject(err);
+    _Promise.prototype.catch = function(isReject){
+        if(this._status = 'rejected'){
+            var err = new TypeError(this._result);
+            var isPromise = isReject(err);
+            if(isPromise instanceof _Promise){
+                return isPromise;
+            }
+            return this;
+        }
+    };
+
+
+    //来自小白
+    class Promise{
+        constructor(executor){
+            this.state = 'pending';
+            this.value = undefined;
+            this.reason = undefined;
+            //成功存放的数组
+            this.onResolvedCallbacks = [];
+            //失败存放的数组
+            this.onRejectedCallbacks = [];
+
+            let resolve = value =>{
+                if(this.state === 'pending'){
+                    this.state = 'fulfilled';
+                    this.value = value;
+                    //一旦resolve执行，调用成功数组的函数
+                    this.onResolvedCallbacks.forEach(fn=>fn());
+                }
+            };
+
+            let reject = value =>{
+                if(this.state === 'pending'){
+                    this.state = 'rejected';
+                    this.value = value;
+                    //一旦resolve执行，调用成功数组的函数
+                    this.onRejectedCallbacks.forEach(fn=>fn());
+                }
+            };
+
+            try{
+                executor(resolve, reject);
+            }catch(err){
+                reject(err);
+            }
+        }
+
+        then(onFulfilled, onRejected){
+            if(this.state === 'fulfilled'){
+                onFulfilled(this.value);
+            }
+            if(this.state === 'rejected'){
+                onRejected(this.value);
+            }
+            //当状态state为pending时
+            if(this.state === 'pending'){
+                //onFulfilled传入成功的数组
+                this.onResolvedCallbacks.push(()=>{onFulfilled(this.value)});
+                //onRejected传入失败的数组
+                this.onRejectedCallbacks.push(()=>{onFulfilled(this.reason)})
+            }
         }
     }
 
-    then(onFulfilled, onRejected){
-        if(this.state === 'fulfilled'){
-            onFulfilled(this.value);
-        }
-        if(this.state === 'rejected'){
-            onRejected(this.value);
-        }
-        //当状态state为pending时
-        if(this.state === 'pending'){
-            //onFulfilled传入成功的数组
-            this.onResolvedCallbacks.push(()=>{onFulfilled(this.value)})
-            //onRejected传入失败的数组
-            this.onRejectedCallbacks.push(()=>{onFulfilled(this.reason)})
-        }
-    }
-}
-
-//promise all
-Promise.all = function(promises){
-    return new Promise((resolve, reject)=>{
-        let done = gen(promises.length, resolve);
-        promises.forEach((promise, index)=>{
-            promise.then((value)=>{
-                done(index, value)
-            }, reject);
-        })
-    });
-};
-
-function gen(length, resolve){
-    let count = 0;
-    let values = [];
-    return function(i, value){
-        values[i] = value;
-        if(++count === length){
-            console.log(values);
-            resolve(values);
-        }
-    }
-}
-
-// promise race
-Promise.race = function(promises){
-    return new Promise((resolve, reject)=>{
-        promises.forEach((promise)=>{
-            promise.then(resolve, reject);
+    //promise all
+    Promise.all = function(promises){
+        return new Promise((resolve, reject)=>{
+            let done = gen(promises.length, resolve);
+            promises.forEach((promise, index)=>{
+                promise.then((value)=>{
+                    done(index, value)
+                }, reject);
+            })
         });
-    })
-};
+    };
 
-//promise finally
-Promise.prototype.finally = function(callback){
-    let P = this.constructor();
-    return this.then(
-        value => P.resolve(callback()).then(()=>value),
-        reason => P.resolve(callback()).then(()=>{throw reason})
-    );
-};
+    function gen(length, resolve){
+        let count = 0;
+        let values = [];
+        return function(i, value){
+            values[i] = value;
+            if(++count === length){
+                console.log(values);
+                resolve(values);
+            }
+        }
+    }
+
+    // promise race
+    Promise.race = function(promises){
+        return new Promise((resolve, reject)=>{
+            promises.forEach((promise)=>{
+                promise.then(resolve, reject);
+            });
+        })
+    };
+
+    //promise finally
+    Promise.prototype.finally = function(callback){
+        let P = this.constructor();
+        return this.then(
+            value => P.resolve(callback()).then(()=>value),
+            reason => P.resolve(callback()).then(()=>{throw reason})
+        );
+    };
+}
 
 //深度克隆
 /**
@@ -926,9 +973,9 @@ function uniq(){
 
 //数组乱序
 function shuffle(a){
-    for(let i=a.length; i; i--){
+    for(let i=a.length-1; i>=0; i--){
         let j = Math.floor(Math.random()*i);
-        [a[i-1], a[j]] = [a[j], a[i-1]];
+        [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
 }
@@ -1150,12 +1197,80 @@ let newMethod = function(Parent, ...rest){
     return (typeof result === 'object')? result: child;
 };
 
-//@todo 防抖 与 节流 （3秒请求一次）
+//@猿辅导
+//实现Promise.all方法
+function isPromise(obj){
+    return !!obj && (typeof obj === 'object' || typeof obj === 'function') && (typeof obj.then === 'function');
+}
 
-//@todo 实现Promise.all方法
+const myPromiseAll = (arr)=>{
+    let res = [];
+    let count = arr.length;
+    return new Promise((resolve, reject)=>{
+        for(let i=0, l=arr.length; i<l; i++){
+            if(isPromise(arr[i])){
+                arr[i].then((data)=>{
+                    res[i] = data;
+                    if(--count === 0){
+                        resolve(res);
+                    }
+                },reject);
+            }else{
+                res[i] = arr[i];
+            }
+        }
+    });
+};
 
-//@todo 自己实现redux 的 store
+//@木瓜移动 @猿辅导 自己实现redux 的 store
+const createStore = (initState, reducer)=>{
+    let state = initState;
+    let listeners = [];
 
+    const getState = ()=>{
+        return state;
+    };
+
+    const dispatch = (action)=>{
+        state = reducer(state, action);
+        listeners.forEach(listener=>listener());
+    };
+
+    const subscribe = (listener)=>{
+        listeners.push(listener);
+        return ()=>{
+            listeners = listeners.filter((l)=>{return l!==listener});
+        }
+    };
+
+    return {getState, dispatch, subscribe};
+};
+
+//@猿辅导 防抖debance 与 节流throttle （3秒请求一次）
+function debance(fn, delay){
+    let timer = null;  //借助闭包
+    return ()=>{
+        if(timer){
+            clearTimeout(timer);
+        }
+        timer = setTimeout(fn, delay);  //简化写法
+    };
+}
+
+function throttle(fn, delay){
+    var valid = true;  //valid： true表示处于休息时间， false表示不处于休息时间，正在工作
+    return ()=>{
+        if(!valid){  //休息时间，暂不接客
+            return false;
+        }
+        //工作时间，执行函数，并在间隔期限内将状态为设为无效
+        valid = false;
+        setTimeout(()=>{
+            fn();
+            valid = true;
+        }, delay);
+    }
+}
 
 
 

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    *{
+      margin: 0;
+      padding: 0;
+    }
+    .father{
+      height: 400px;
+      position: relative;  /*父元素相对定位*/
+    }
+    .left{
+      width: 200px;
+      background-color: yellow;
+      position: absolute;  /*left绝对定位*/
+    }
+    .right{
+      background-color: green;
+      margin-left: 200px;  /*right 设置margin-left偏移量是left的宽度*/
+    }
+  </style>
+</head>
+<body>
+<div class="father">
+  <div class="left">left</div>
+  <div class="right">right</div>
+</div>
+</body>
+</html>
